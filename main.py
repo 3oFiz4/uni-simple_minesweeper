@@ -1,5 +1,57 @@
 # from pprint import pp as log # Used for logging purpose especially dealing with dictionary. Not really used.
-import random
+import random # built-in
+from pathlib import Path# built-in
+import threading # built-in
+import os # built-in
+BASE_DIR = Path(__file__).parent
+RINGTONE_FOLDER = "sfx"
+try:
+    from playsound import playsound # 3rd-party
+    PLAYSOUND_AVAILABLE = True
+    def sfx(ringtone_name=None):
+        ringtone_path = BASE_DIR / RINGTONE_FOLDER
+        if not os.path.exists(ringtone_path):
+            # console.print("[red]Ringtone folder not found.[/red]")
+            return
+        files = [f for f in os.listdir(ringtone_path) if f.lower().endswith(('.mp3', '.wav'))]
+        if not files:
+            # console.print("[red]No ringtones found.[/red]")
+            return
+        if ringtone_name:
+            candidates = [f for f in files if f.startswith(ringtone_name)]
+            sound_file = candidates[0] if candidates else files[0]
+        else:
+            sound_file = files[0]
+        full_path = ringtone_path / sound_file
+        playsound(str(full_path), block=False)
+except ImportError:
+    PLAYSOUND_AVAILABLE = False
+
+    def sfx(ringtone_name):
+        pass
+color = {
+    "black":   "\033[30m",
+    "red":     "\033[31m",
+    "green":   "\033[32m",
+    "yellow":  "\033[33m",
+    "blue":    "\033[34m",
+    "magenta": "\033[35m",
+    "cyan":    "\033[36m",
+    "white":   "\033[37m",
+
+    # Bright colors
+    "bright_black":   "\033[90m",
+    "bright_red":     "\033[91m",
+    "bright_green":   "\033[92m",
+    "bright_yellow":  "\033[93m",
+    "bright_blue":    "\033[94m",
+    "bright_magenta": "\033[95m",
+    "bright_cyan":    "\033[96m",
+    "bright_white":   "\033[97m",
+
+    # Reset
+    "reset": "\033[0m"
+}
 def main():
     def en_dict(s):
         """
@@ -159,7 +211,7 @@ def main():
                 sep = "| "
             else:
                 sep = " | "
-            print(f"{y}", end=sep)
+            print(f"\033[31m{y}\033[0m", end=sep)
             indexy+=1 # For each printed index, we add +1, so if hits 10 later in indexy, it will appear fit.
             for x in range(prompt_size_x): # Within Y, for each x 
                 if index == 0: # Also like indexy, but for x pos 
@@ -167,7 +219,7 @@ def main():
                         sep = "| "
                     else:
                         sep = " | "
-                    print(f"{x}", end=sep)
+                    print(f"\033[36m{x}\033[0m", end=sep)
                 else:
                     # Handling the cell when COUNT is >= 10. So the separator look fit.
                     cell = coord(_map, x, y) 
@@ -175,7 +227,28 @@ def main():
                         sep = "| "
                     elif type(cell[0]) is str:
                         sep = " | "
-                    print(coord(_map, x, y)[show],end=sep)
+                    # PIXEL
+                    value = coord(_map, x, y)
+                    det_color = color["reset"]
+                    if value[show] == 1:
+                        det_color = color["cyan"]
+                    elif value[show] == 2:
+                        det_color = color["green"]
+                    elif value[show] == 3:
+                        det_color = color["red"]
+                    elif value[show] == 4:
+                        det_color = color["blue"] 
+                    elif value[show] == 5:
+                        det_color = color["yellow"]
+                    elif value[show] == 6:
+                        det_color = color['magenta']
+                    elif value[show] == 7:
+                        det_color = color['bright_magenta']
+                    elif value[show] == 8:
+                        det_color  = color['bright_blue']
+                    elif value[show] == "X":
+                        det_color = "\033[41m"
+                    print(f"{det_color}{value[show]}\033[0m",end=sep)
             index+=1
             print()
     # Display Map:
@@ -190,12 +263,16 @@ def main():
         move = list(input("Go where (x,y): ").split(',')) # 3,2 will work. 3, 2 will not work. Be careful with spaces.
         step = coord(_map, int(move[0]), int(move[1])) # The step or pixel that we stepped unto
         if step[1] == "X": # Bomb
-            print(f"You failed! You stepped on a landmine!\nScore: {score}")
+            print(f"\033[41mYou failed! You stepped on a landmine!{color['reset']}\n{color['green']}Score: {color['yellow']}{score}{color['reset']}")
+            sfx("bomb.mp3")
             fail_detect = 1 # loser.
         elif step[1] == "-" or type(step[1]) is int: # Non-Bomb Element
+            if step[1] == "-":
+                sfx("step.mp3")
+            else:
+                sfx("point.mp3")
             coord(_map, int(move[0]), int(move[1]), "modify", [step[1], step[1]]) # Now @APPEARANCE_VAL is either - or N, and so is @ACTUAL_VAL
             if type(step[1]) is int: score += step[1] # If the pixel/step has count step, add it to the score
-
 
 if __name__ == "__main__":
         main()
